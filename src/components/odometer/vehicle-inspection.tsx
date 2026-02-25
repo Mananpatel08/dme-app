@@ -1,34 +1,25 @@
 "use client";
 
-import React, { Dispatch, SetStateAction, useMemo } from "react";
+import React, { useMemo } from "react";
 import { SectionBlock } from "./section-block";
 import { Fuel, ShieldCheck, Wrench } from "lucide-react";
-import { INSPECTION_ITEMS } from "@/utils/constants";
+import { FLUIDS_ITEMS, GENERAL_ITEMS } from "@/utils/constants";
+import { Control } from "react-hook-form";
+import { TripInspectionFormValues } from "@/types";
 
 interface VehicleInspectionProps {
   progress: number;
-  goodMap: Record<string, boolean>;
-  addedMap: Record<string, boolean>;
-  commentsMap: Record<string, string>;
-  setGoodMap: Dispatch<SetStateAction<Record<string, boolean>>>;
-  setAddedMap: Dispatch<SetStateAction<Record<string, boolean>>>;
-  setCommentsMap: Dispatch<SetStateAction<Record<string, string>>>;
+  control: Control<TripInspectionFormValues>;
 }
 export const VehicleInspection = ({
   progress,
-  goodMap,
-  addedMap,
-  commentsMap,
-  setGoodMap,
-  setAddedMap,
-  setCommentsMap,
+  control,
 }: VehicleInspectionProps) => {
-
   const groupedItems = useMemo(
     () => ({
-      fluids: INSPECTION_ITEMS.filter((item) => item.group === "fluids"),
-      safety: INSPECTION_ITEMS.filter((item) => item.group === "safety"),
-      exterior: INSPECTION_ITEMS.filter((item) => item.group === "exterior"),
+      fluids: FLUIDS_ITEMS,
+      safety: GENERAL_ITEMS.filter((item) => item.group === "safety"),
+      exterior: GENERAL_ITEMS.filter((item) => item.group === "exterior"),
     }),
     [],
   );
@@ -59,58 +50,29 @@ export const VehicleInspection = ({
 
       <SectionBlock
         title="Fluids"
+        name="fluids"
         icon={<Fuel className="w-4 h-4 text-amber-500" />}
         items={groupedItems.fluids}
-        goodMap={goodMap}
-        addedMap={addedMap}
-        commentsMap={commentsMap}
-        onGoodChange={(id, value) =>
-          setGoodMap((prev) => ({ ...prev, [id]: value }))
-        }
-        onAddedChange={(id, value) =>
-          setAddedMap((prev) => ({ ...prev, [id]: value }))
-        }
-        onCommentChange={(id, value) =>
-          setCommentsMap((prev) => ({ ...prev, [id]: value }))
-        }
+        control={control}
       />
 
       <SectionBlock
         title="Safety"
+        name="general"
         icon={<ShieldCheck className="w-4 h-4 text-emerald-500" />}
         items={groupedItems.safety}
-        goodMap={goodMap}
-        addedMap={addedMap}
-        commentsMap={commentsMap}
-        onGoodChange={(id, value) =>
-          setGoodMap((prev) => ({ ...prev, [id]: value }))
-        }
-        onAddedChange={(id, value) =>
-          setAddedMap((prev) => ({ ...prev, [id]: value }))
-        }
-        onCommentChange={(id, value) =>
-          setCommentsMap((prev) => ({ ...prev, [id]: value }))
-        }
         isAddedColumn={false}
+        control={control}
       />
 
       <SectionBlock
         title="Exterior & Compliance"
+        name="general"
         icon={<Wrench className="w-4 h-4 text-blue-500" />}
         items={groupedItems.exterior}
-        goodMap={goodMap}
-        addedMap={addedMap}
-        commentsMap={commentsMap}
-        onGoodChange={(id, value) =>
-          setGoodMap((prev) => ({ ...prev, [id]: value }))
-        }
-        onAddedChange={(id, value) =>
-          setAddedMap((prev) => ({ ...prev, [id]: value }))
-        }
-        onCommentChange={(id, value) =>
-          setCommentsMap((prev) => ({ ...prev, [id]: value }))
-        }
+        startIndex={groupedItems.safety.length}
         isAddedColumn={false}
+        control={control}
       />
     </div>
   );

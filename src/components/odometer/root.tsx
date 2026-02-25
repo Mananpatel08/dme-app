@@ -9,20 +9,36 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Dropdown from "../ui/dropdown";
-import { INSPECTION_ITEMS } from "@/utils/constants";
 import { VehicleInspection } from "./vehicle-inspection";
 import { useGetVehiclesQuery } from "@/api/vehicle";
 import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
 import { useGetTripsQuery } from "@/api/trips";
-import { TripInspectionPayload } from "@/types";
+import {
+  Trip,
+  TripInspectionFormValues,
+  TripInspectionPayloadBody,
+} from "@/types";
+import {
+  FLUIDS_ITEMS,
+  FLUIDS_SCHEMA,
+  GENERAL_ITEMS,
+  GENERAL_SCHEMA,
+} from "@/utils/constants";
+import { TripField } from "./trip-field";
+import {
+  buildBasePayload,
+  buildFluidPayload,
+  buildGeneralPayload,
+} from "@/utils/buildTripInspectionPayload";
+import {
+  getCurrentDate,
+  getCurrentLocalTime,
+  getCurrentTime,
+} from "@/utils/helper";
 
 export const OdometerRoot = () => {
   // State
   const [mode, setMode] = useState<string>("pre_trip");
-  const [odometerReading, setOdometerReading] = useState("");
-  const [goodMap, setGoodMap] = useState<Record<string, boolean>>({});
-  const [addedMap, setAddedMap] = useState<Record<string, boolean>>({});
-  const [commentsMap, setCommentsMap] = useState<Record<string, string>>({});
   // Queries
   const { data: vehicles } = useGetVehiclesQuery();
   const { data: trips } = useGetTripsQuery();
@@ -43,44 +59,59 @@ export const OdometerRoot = () => {
       })) ?? []
     );
   }, [trips]);
-  const now = useMemo(
-    () =>
-      new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      }),
-    [],
-  );
+  const now = getCurrentLocalTime();
+
+  const TOTAL_ITEMS = FLUIDS_ITEMS.length + GENERAL_ITEMS.length;
+
   // Form
-  const methods = useForm<TripInspectionPayload>({
+  const methods = useForm<TripInspectionFormValues>({
     defaultValues: {
       vehicle: undefined,
       trip: undefined,
       trip_name: "pre_trip",
+      trip_date: getCurrentDate(),
+      start_time: getCurrentTime(),
       start_reading: "",
+      fluids: FLUIDS_SCHEMA.map((item) => ({
+        key: item.formKey,
+        status: 0,
+        added: false,
+        comments: "",
+      })),
+      general: GENERAL_SCHEMA.map((item) => ({
+        key: item.formKey,
+        status: 0,
+        comments: "",
+      })),
     },
   });
   const { handleSubmit, register, control } = methods;
   // Watches
-  const vehicleId = useWatch({
-    control: methods.control,
-    name: "vehicle",
+  const { vehicle, trip, fluids, general } = useWatch({
+    control,
   });
-  const tripId = useWatch({
-    control: methods.control,
-    name: "trip",
-  });
-  const checkedCount = INSPECTION_ITEMS.filter(
-    (item) => goodMap[item.id],
-  ).length;
-  const progress = Math.round((checkedCount / INSPECTION_ITEMS.length) * 100);
 
-  const onSubmit = (data: {
-    vehicle: string | undefined;
-    odometerReading: string;
-  }) => {
-    console.log("onSubmit", data);
+  const checkedCount =
+    (fluids?.filter((item) => item.status === 1).length ?? 0) +
+    (general?.filter((item) => item.status === 1).length ?? 0);
+
+  const progress = Math.round((checkedCount / TOTAL_ITEMS) * 100);
+
+  const onSubmit = (data: TripInspectionFormValues) => {
+    if (!data.vehicle || !data.trip) return;
+
+    const selectedTrip = trips?.data?.results?.find(
+      (tripItem) => Number(tripItem.id) === Number(data.trip),
+    ) as Trip;
+
+    const payload: TripInspectionPayloadBody = {
+      ...buildBasePayload(data, mode, selectedTrip),
+      ...buildFluidPayload(data.fluids),
+      ...buildGeneralPayload(data.general),
+    };
+
+    console.log("TripInspectionPayload", payload);
+    // TODO: send payload to backend mutation when API endpoint is ready.
   };
 
   return (
@@ -93,7 +124,7 @@ export const OdometerRoot = () => {
                 Odometer & Inspection
               </h1>
               <p className="text-base sm:text-base text-gray-500 mt-0.5">
-                Complete your {mode === "pre-trip" ? "pre-trip" : "post-trip"}{" "}
+                Complete your {mode === "pre_trip" ? "pre-trip" : "post-trip"}{" "}
                 checklist
               </p>
             </div>
@@ -144,8 +175,6 @@ export const OdometerRoot = () => {
                     {...register("start_reading")}
                     type="number"
                     min={0}
-                    value={odometerReading}
-                    onChange={(e) => setOdometerReading(e.target.value)}
                     placeholder="e.g. 102545"
                     className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base text-gray-800 outline-none focus:ring-2 focus:ring-rose-100 focus:border-rose-300"
                   />
@@ -153,80 +182,28 @@ export const OdometerRoot = () => {
               </label>
             </div>
 
-            {vehicleId && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-end">
-                  <label className="block">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 font-medium">
-                      Trip
-                    </p>
-                    <Controller
-                      name="trip"
-                      control={control}
-                      render={({ field }) => (
-                        <Dropdown
-                          {...field}
-                          options={tripOptions}
-                          onChange={(option) => {
-                            field.onChange(option.value);
-                          }}
-                          value={field.value}
-                          className="mt-2 w-full"
-                          buttonClassName="px-3 py-2.5 bg-gray-50"
-                        />
-                      )}
-                    />
-                  </label>
-
-                  <div className="bg-gray-50 rounded-xl p-1 inline-flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setMode("pre_trip")}
-                      className={`px-4 py-2 rounded-lg text-base font-semibold transition ${
-                        mode === "pre_trip"
-                          ? "bg-emerald-500 text-white shadow-sm"
-                          : "text-gray-600 hover:bg-white"
-                      }`}
-                    >
-                      Pre-Trip Inspection
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMode("post_trip")}
-                      className={`px-4 py-2 rounded-lg text-base font-semibold transition ${
-                        mode === "post_trip"
-                          ? "bg-sky-500 text-white shadow-sm"
-                          : "text-gray-600 hover:bg-white"
-                      }`}
-                    >
-                      Post-Trip Inspection
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {tripId && (
-              <VehicleInspection
-                progress={progress}
-                goodMap={goodMap}
-                addedMap={addedMap}
-                commentsMap={commentsMap}
-                setGoodMap={setGoodMap}
-                setAddedMap={setAddedMap}
-                setCommentsMap={setCommentsMap}
+            {vehicle && (
+              <TripField
+                control={control}
+                tripOptions={tripOptions}
+                mode={mode}
+                setMode={setMode}
               />
             )}
 
-            {tripId && (
+            {trip && (
+              <VehicleInspection progress={progress} control={control} />
+            )}
+
+            {trip && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="inline-flex items-center gap-2 text-xs text-gray-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  {checkedCount} of {INSPECTION_ITEMS.length} items marked good
+                  {checkedCount} of {TOTAL_ITEMS} items marked as good
                 </div>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-base font-semibold hover:from-emerald-600 hover:to-teal-600 transition"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white text-base font-semibold hover:bg-emerald-600 transition"
                 >
                   <FileCheck2 className="w-4 h-4" />
                   Submit Inspection

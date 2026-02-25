@@ -35,6 +35,19 @@ export function getImage(imageUrl: string): string {
   return url;
 }
 
+export const getCurrentDate = () => new Date().toISOString().slice(0, 10);
+
+export const getCurrentTime = () => new Date().toTimeString().slice(0, 8);
+
+export const getCurrentLocalTime = (): string => {
+  // Returns time in the format of HH:MM
+  return new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 export const formatNumber = (value?: number) =>
   typeof value === "number"
     ? value.toLocaleString("en-US", {

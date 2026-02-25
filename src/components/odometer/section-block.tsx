@@ -1,30 +1,25 @@
-import { InspectionItem } from "@/types";
+import { InspectionItem, TripInspectionFormValues } from "@/types";
 import React from "react";
+import { Control, Controller } from "react-hook-form";
 
 interface SectionBlockProps {
   title: string;
   icon: React.ReactNode;
+  name: "fluids" | "general";
+  control: Control<TripInspectionFormValues>;
   items: InspectionItem[];
-  goodMap: Record<string, boolean>;
-  addedMap: Record<string, boolean>;
-  commentsMap: Record<string, string>;
-  onGoodChange: (id: string, value: boolean) => void;
-  onAddedChange: (id: string, value: boolean) => void;
-  onCommentChange: (id: string, value: string) => void;
   isAddedColumn?: boolean;
+  startIndex?: number;
 }
 
 export const SectionBlock = ({
   title,
   icon,
+  name,
+  control,
   items,
-  goodMap,
-  addedMap,
-  commentsMap,
-  onGoodChange,
-  onAddedChange,
-  onCommentChange,
   isAddedColumn = true,
+  startIndex = 0,
 }: SectionBlockProps) => {
   return (
     <section className="mb-5 last:mb-0">
@@ -54,48 +49,68 @@ export const SectionBlock = ({
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border-t border-gray-100 bg-white">
+            {items.map((item, index) => {
+              const fieldIndex = startIndex + index;
+
+              return (
+              <tr key={`${item.id}-${fieldIndex}`} className="border-t border-gray-100 bg-white">
                 <td className="px-3 py-2.5 text-sm text-gray-800">
                   {item.label}
                 </td>
                 <td className="px-3 py-2.5">
                   <label className="inline-flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(goodMap[item.id])}
-                      onChange={(e) => onGoodChange(item.id, e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-400"
+                    <Controller
+                      name={`${name}.${fieldIndex}.status`}
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value === 1}
+                          onChange={(e) =>
+                            field.onChange(e.target.checked ? 1 : 0)
+                          }
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-500"
+                        />
+                      )}
                     />
                     Yes
                   </label>
                 </td>
-                {isAddedColumn && (
+                {isAddedColumn && name === "fluids" && (
                   <td className="px-3 py-2.5">
                     <label className="inline-flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(addedMap[item.id])}
-                        onChange={(e) =>
-                          onAddedChange(item.id, e.target.checked)
-                        }
-                        className="w-4 h-4 rounded border-gray-300 text-sky-500 focus:ring-sky-400"
+                      <Controller
+                        name={`${name}.${fieldIndex}.added`}
+                        control={control}
+                        render={({ field }) => (
+                          <input
+                            type="checkbox"
+                            checked={!!field.value}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-sky-500"
+                          />
+                        )}
                       />
                       Added
                     </label>
                   </td>
                 )}
                 <td className="px-3 py-2.5">
-                  <input
-                    type="text"
-                    value={commentsMap[item.id] ?? ""}
-                    onChange={(e) => onCommentChange(item.id, e.target.value)}
-                    placeholder="Add note (optional)"
-                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-base text-gray-800 outline-none focus:ring-2 focus:ring-rose-100 focus:border-rose-300"
+                  <Controller
+                    name={`${name}.${fieldIndex}.comments`}
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        type="text"
+                        {...field}
+                        placeholder="Add note (optional)"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2"
+                      />
+                    )}
                   />
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
