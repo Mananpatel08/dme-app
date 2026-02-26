@@ -15,6 +15,7 @@ interface DropdownProps {
   onChange: (option: DropdownOption) => void;
   className?: string;
   buttonClassName?: string;
+  name?: string;
 }
 
 export default function Dropdown({
@@ -24,6 +25,7 @@ export default function Dropdown({
   onChange,
   className = "",
   buttonClassName = "",
+  name = "results",
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -62,21 +64,27 @@ export default function Dropdown({
       {/* Dropdown Menu */}
       {open && (
         <div className="absolute z-50 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg max-h-60 overflow-y-auto">
-          {options.map((option) => (
-            <div
-              key={option.value}
-              onClick={(e) => {
-                e.preventDefault();
-                onChange(option);
-                setOpen(false);
-              }}
-              className={`px-4 py-2 text-base cursor-pointer hover:bg-gray-50 ${
-                option.value === value ? "bg-gray-100 font-medium" : ""
-              }`}
-            >
-              {option.label}
+          {options.length === 0 ? (
+            <div className="px-4 py-2 text-base text-gray-500">
+              No {name} available
             </div>
-          ))}
+          ) : (
+            options.map((option) => (
+              <div
+                key={option.value}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={`px-4 py-2 text-base cursor-pointer hover:bg-gray-50 ${
+                  option.value === value ? "bg-gray-100 font-medium" : ""
+                }`}
+              >
+                {option.label}
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
