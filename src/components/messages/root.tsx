@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { InputBox } from "./input-box";
 import { MessagesHeader } from "./header";
 import { MessageWindow } from "./message-window";
@@ -23,6 +23,7 @@ export const MessagesRoot = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // useStates
   const [inputText, setInputText] = useState("");
+  const [page, setPage] = useState(1);
   const [LiveMessages, setLiveMessages] = useState<Message[]>([]);
   const [showScrollButton, setShowScrollButton] = useState(false);
   // useContexts
@@ -31,10 +32,13 @@ export const MessagesRoot = () => {
   const userId = userDetails?.id;
   const chatRoomId = 1;
   // queries
-  const { data: messagesData } = useGetMessagesQuery(chatRoomId);
+  const { data: messagesData, isLoading: isMessagesLoading } =
+    useGetMessagesQuery(chatRoomId, page);
   // derived states
-  const ApiMessages = messagesData?.data.results ?? [];
-  const messages = [...ApiMessages, ...LiveMessages];
+  const ApiMessages = (messagesData?.data.results ?? []).slice().reverse();
+  const messages = useMemo(() => {
+    return [...ApiMessages, ...LiveMessages];
+  }, [ApiMessages, LiveMessages]);
   const groupedMessages = groupMessagesByDate(messages);
 
   // function
@@ -171,6 +175,7 @@ export const MessagesRoot = () => {
         scrollToBottom={scrollToBottom}
         showScrollButton={showScrollButton}
         handleScroll={handleScroll}
+        isLoading={isMessagesLoading}
       />
 
       <InputBox
