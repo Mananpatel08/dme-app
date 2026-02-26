@@ -1,15 +1,10 @@
 export interface User {
-  id: string;
+  id: number;
   email: string;
-  firstName: string;
-  lastName: string;
-  avatar?: string;
-  role: UserRole;
-  createdAt: string;
-  updatedAt: string;
+  username: string;
+  first_name: string;
+  last_name: string;
 }
-
-export type UserRole = "admin" | "user" | "moderator";
 
 export interface LoginCredentials {
   username: string;

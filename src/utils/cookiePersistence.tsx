@@ -48,7 +48,7 @@ class NamespacedCookie {
 }
 
 class CookiePersistence {
-  static KEY = "SKILLSPACE_BROWSER_PERSISTENCE";
+  static KEY = "DME_BROWSER_PERSISTENCE";
   cookie: NamespacedCookie;
 
   constructor() {

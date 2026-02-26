@@ -33,7 +33,7 @@ class NamespacedLocalStorage {
 }
 
 export class BrowserPersistence {
-  static KEY = "SKILLSPACE_BROWSER_PERSISTENCE";
+  static KEY = "DME_BROWSER_PERSISTENCE";
   private storage: NamespacedLocalStorage;
 
   constructor(localStorage = globalThis.localStorage || storageMock) {

@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import {
-  CarFront,
-  Clock3,
-  FileCheck2,
-  Gauge,
-  CheckCircle2,
-} from "lucide-react";
+import { CarFront, FileCheck2, Gauge, CheckCircle2 } from "lucide-react";
 import Dropdown from "../ui/dropdown";
 import { VehicleInspection } from "./vehicle-inspection";
 import { useGetVehiclesQuery } from "@/api/vehicle";
@@ -30,11 +24,8 @@ import {
   buildFluidPayload,
   buildGeneralPayload,
 } from "@/utils/buildTripInspectionPayload";
-import {
-  getCurrentDate,
-  getCurrentLocalTime,
-  getCurrentTime,
-} from "@/utils/helper";
+import { getCurrentDate, getCurrentTime } from "@/utils/date";
+import { Clock } from "../ui";
 
 export const OdometerRoot = () => {
   // State
@@ -59,7 +50,6 @@ export const OdometerRoot = () => {
       })) ?? []
     );
   }, [trips]);
-  const now = getCurrentLocalTime();
 
   const TOTAL_ITEMS = FLUIDS_ITEMS.length + GENERAL_ITEMS.length;
 
@@ -128,12 +118,7 @@ export const OdometerRoot = () => {
                 checklist
               </p>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-100">
-              <Clock3 className="w-4 h-4 text-gray-400" />
-              <span className="text-base sm:text-base font-medium text-gray-700">
-                {now}
-              </span>
-            </div>
+            <Clock />
           </div>
         </div>
 

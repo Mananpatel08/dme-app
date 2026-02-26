@@ -1,7 +1,7 @@
 import CookiePersistence from "@/utils/cookiePersistence";
 import { BrowserPersistence } from "@/utils/simplePersistence";
 import { Client } from "../apiClient";
-import { LoginCredentials, LoginResponse } from "@/types";
+import { LoginCredentials, LoginResponse, User } from "@/types";
 
 const client = new Client();
 const storage = new BrowserPersistence();
@@ -45,5 +45,24 @@ export default class AuthService {
       data,
     });
     return response.data;
+  }
+
+  async logout(): Promise<void> {
+    const response = await client.api({
+      method: "POST",
+      url: "/api/logout/",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return response.data;
+  }
+
+  async getUser(): Promise<User> {
+    const response = await client.api({
+      method: "GET",
+      url: "/api/me/",
+    });
+    return response.data.data;
   }
 }

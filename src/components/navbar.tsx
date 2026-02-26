@@ -4,12 +4,12 @@ import React from "react";
 import Image from "next/image";
 import logo from "@/assets/images/dme_logo.png";
 import { LogOut, RefreshCcw } from "lucide-react";
+import { useUserContext } from "@/context/userContext";
+import { getUsername } from "@/utils/helper";
 
-interface TopNavbarProps {
-  username?: string;
-}
+export const TopNavbar = () => {
+  const { userDetails } = useUserContext();
 
-export const TopNavbar = ({ username = "Manan" }: TopNavbarProps) => {
   const handleRefresh = () => {
     console.log("Refresh clicked");
   };
@@ -24,7 +24,7 @@ export const TopNavbar = ({ username = "Manan" }: TopNavbarProps) => {
         <Image src={logo} alt="DME Logo" width={35} height={35} />
         <div>
           <p className="text-sm font-semibold text-gray-800">
-            Welcome, {username}
+            Welcome, {getUsername(userDetails)}
           </p>
         </div>
       </div>

@@ -5,7 +5,7 @@ import {
   TripInspectionFormValues,
 } from "@/types";
 import { FLUIDS_SCHEMA, GENERAL_SCHEMA } from "./constants";
-import { getCurrentDate, getCurrentTime } from "./helper";
+import { getCurrentDate, getCurrentTime } from "./date";
 
 export const buildBasePayload = (
   data: TripInspectionFormValues,
