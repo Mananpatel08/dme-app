@@ -6,16 +6,21 @@ import logo from "@/assets/images/dme_logo.png";
 import { LogOut, RefreshCcw } from "lucide-react";
 import { useUserContext } from "@/context/userContext";
 import { getUsername } from "@/utils/helper";
+import AuthService from "@/services/auth";
 
 export const TopNavbar = () => {
   const { userDetails } = useUserContext();
 
+  const authService = new AuthService();
+
   const handleRefresh = () => {
-    console.log("Refresh clicked");
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
   };
 
   const handleLogout = () => {
-    console.log("Logout clicked");
+    authService.removeToken();
   };
 
   return (

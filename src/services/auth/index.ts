@@ -25,6 +25,8 @@ export default class AuthService {
   removeToken(): void {
     storage.removeItem("token");
     localCookie.removeItem("token");
+    document.cookie = `token=; path=/; max-age=0;`;
+    window.location.href = "/login";
   }
 
   getToken(): string | undefined {
