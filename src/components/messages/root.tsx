@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useLayoutEffect } from "react";
 import { InputBox } from "./input-box";
 import { MessagesHeader } from "./header";
 import { MessageWindow } from "./message-window";
 import {
   IncomingMessage,
   IncomingStatusUpdate,
-  Message,
   OutgoingMessage,
   OutgoingStatusUpdate,
 } from "@/types";
@@ -15,31 +14,56 @@ import { groupMessagesByDate } from "@/utils/helper";
 import { useGetMessagesQuery } from "@/api/messages";
 import { chatSocket } from "@/services/message/chatSocket";
 import { useUserContext } from "@/context/userContext";
+import { useChatStore } from "@/store/chat.store";
 
 export const MessagesRoot = () => {
   // useRefs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  // useStates
-  const [inputText, setInputText] = useState("");
-  const [page, setPage] = useState(1);
-  const [LiveMessages, setLiveMessages] = useState<Message[]>([]);
-  const [showScrollButton, setShowScrollButton] = useState(false);
+  // store states
+  const inputText = useChatStore((state) => state.inputText);
+  const page = useChatStore((state) => state.page);
+  const apiMessages = useChatStore((state) => state.apiMessages);
+  const hasMoreMessages = useChatStore((state) => state.hasMoreMessages);
+  const liveMessages = useChatStore((state) => state.liveMessages);
+  const showScrollButton = useChatStore((state) => state.showScrollButton);
+  // store actions
+  const setInputText = useChatStore((state) => state.setInputText);
+  const incrementPage = useChatStore((state) => state.incrementPage);
+  const setShowScrollButton = useChatStore((state) => state.setShowScrollButton);
+  const mergeApiMessages = useChatStore((state) => state.mergeApiMessages);
+  const resetInputText = useChatStore((state) => state.resetInputText);
+  const addOptimisticMessage = useChatStore(
+    (state) => state.addOptimisticMessage,
+  );
+  const applyStatusUpdate = useChatStore((state) => state.applyStatusUpdate);
+  const upsertIncomingMessage = useChatStore(
+    (state) => state.upsertIncomingMessage,
+  );
   // useContexts
   const { userDetails } = useUserContext();
+  const pendingScrollRestoreRef = useRef<{
+    previousHeight: number;
+    previousTop: number;
+  } | null>(null);
+  const hasInitialApiScrollRef = useRef(false);
   // derived states
   const userId = userDetails?.id;
   const chatRoomId = 1;
   // queries
-  const { data: messagesData, isLoading: isMessagesLoading } =
+  const {
+    data: messagesData,
+    isLoading: isMessagesLoading,
+    isFetching: isMessagesFetching,
+  } =
     useGetMessagesQuery(chatRoomId, page);
   // derived states
-  const ApiMessages = (messagesData?.data.results ?? []).slice().reverse();
   const messages = useMemo(() => {
-    return [...ApiMessages, ...LiveMessages];
-  }, [ApiMessages, LiveMessages]);
+    return [...apiMessages, ...liveMessages];
+  }, [apiMessages, liveMessages]);
   const groupedMessages = groupMessagesByDate(messages);
+  const isInitialLoading = isMessagesLoading && messages.length === 0;
 
   // function
   const markRoomAsRead = () => {
@@ -55,21 +79,31 @@ export const MessagesRoot = () => {
     if (!el) return;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     setShowScrollButton(distanceFromBottom > 100);
+
+    const isAtTop = el.scrollTop <= 60;
+    if (
+      isAtTop &&
+      hasMoreMessages &&
+      !isMessagesLoading &&
+      !isMessagesFetching
+    ) {
+      pendingScrollRestoreRef.current = {
+        previousHeight: el.scrollHeight,
+        previousTop: el.scrollTop,
+      };
+      incrementPage();
+    }
   };
 
   const handleSend = () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
 
-    const optimisticMessage: Message = {
-      id: `temp-${Date.now()}`,
-      chat_room: chatRoomId,
+    addOptimisticMessage({
+      chatRoomId,
+      senderId: userId ?? 0,
       message: trimmed,
-      sender: userId ?? 0,
-      created_at: new Date().toISOString(),
-    };
-
-    setLiveMessages((prev) => [...prev, optimisticMessage]);
+    });
 
     const newMsg: OutgoingMessage = {
       action: "send_message",
@@ -78,7 +112,7 @@ export const MessagesRoot = () => {
     };
     chatSocket.send(newMsg);
 
-    setInputText("");
+    resetInputText();
 
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
@@ -107,36 +141,33 @@ export const MessagesRoot = () => {
 
   // useEffects
   useEffect(() => {
+    if (!messagesData) return;
+    mergeApiMessages({
+      page,
+      hasNext: Boolean(messagesData.data.next),
+      messages: messagesData.data.results.slice().reverse(),
+    });
+  }, [mergeApiMessages, messagesData, page]);
+
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    const pendingRestore = pendingScrollRestoreRef.current;
+    if (!el || !pendingRestore) return;
+
+    const newHeight = el.scrollHeight;
+    el.scrollTop = newHeight - pendingRestore.previousHeight + pendingRestore.previousTop;
+    pendingScrollRestoreRef.current = null;
+  }, [apiMessages.length]);
+
+  useEffect(() => {
     const handleMessage = (data: IncomingMessage | IncomingStatusUpdate) => {
       if (data.type === "status_update") {
-        setLiveMessages((prev) =>
-          prev.map((msg) =>
-            data.message_ids.includes(Number(msg.id))
-              ? { ...msg, status: data.status }
-              : msg,
-          ),
-        );
+        applyStatusUpdate(data);
         return;
       }
 
       if (data.type === "chat_message") {
-        setLiveMessages((prev) => {
-          const tempIndex = prev.findIndex(
-            (msg) =>
-              typeof msg.id === "string" &&
-              msg.id.startsWith("temp-") &&
-              msg.sender === data.sender &&
-              msg.message === data.message,
-          );
-
-          if (tempIndex !== -1) {
-            const updated = [...prev];
-            updated[tempIndex] = data;
-            return updated;
-          }
-
-          return [...prev, data];
-        });
+        upsertIncomingMessage(data);
 
         const isMine = data.sender === userId;
 
@@ -150,15 +181,20 @@ export const MessagesRoot = () => {
     return () => {
       chatSocket.unsubscribe(handleMessage);
     };
-  }, [userId]);
+  }, [applyStatusUpdate, upsertIncomingMessage, userId]);
 
   useEffect(() => {
-    scrollToBottom(false);
-  }, []);
+    if (!hasInitialApiScrollRef.current && apiMessages.length > 0) {
+      scrollToBottom(false);
+      hasInitialApiScrollRef.current = true;
+    }
+  }, [apiMessages.length]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages.length]);
+    if (liveMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [liveMessages.length]);
 
   useEffect(() => {
     markRoomAsRead();
@@ -175,7 +211,8 @@ export const MessagesRoot = () => {
         scrollToBottom={scrollToBottom}
         showScrollButton={showScrollButton}
         handleScroll={handleScroll}
-        isLoading={isMessagesLoading}
+        isLoading={isInitialLoading}
+        isFetchingOlder={isMessagesFetching && page > 1}
       />
 
       <InputBox

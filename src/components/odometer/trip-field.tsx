@@ -17,7 +17,7 @@ export const TripField = ({
   setMode,
 }: TripFieldProps) => {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+    <div className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-end">
         <label className="block">
           <p className="text-xs uppercase tracking-wider text-gray-400 font-medium">

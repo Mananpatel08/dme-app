@@ -6,7 +6,7 @@ export const ChatSkeleton = () => {
   return (
     <div className="flex flex-col h-full bg-gray-100 animate-pulse">
       {/* Messages */}
-      <div className="flex-1 overflow-hidden px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-hidden space-y-4">
         {/* Left message */}
         <div className="flex items-start gap-2">
           <div className="w-8 h-8 rounded-full bg-gray-300" />
@@ -21,7 +21,7 @@ export const ChatSkeleton = () => {
         {/* Left message */}
         <div className="flex items-start gap-2">
           <div className="w-8 h-8 rounded-full bg-gray-300" />
-          <div className="w-40 h-10 bg-gray-300 rounded-xl rounded-xl rounded-tl-md" />
+          <div className="w-24 h-10 bg-gray-300 rounded-xl rounded-xl rounded-tl-md" />
         </div>
 
         {/* Right message */}

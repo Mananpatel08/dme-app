@@ -107,7 +107,7 @@ export const OdometerRoot = () => {
   return (
     <div className="px-4 py-4 sm:px-6 sm:py-6 ">
       <div className="max-w-6xl mx-auto space-y-4">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
+        <div className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-lg sm:text-xl font-semibold text-gray-900">
@@ -125,7 +125,7 @@ export const OdometerRoot = () => {
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-3">
+              <label className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4 flex items-start gap-3">
                 <CarFront className="w-4 h-4 text-gray-500 mt-1" />
                 <div className="w-full">
                   <p className="text-xs uppercase tracking-wider text-gray-400 font-medium">
@@ -150,7 +150,7 @@ export const OdometerRoot = () => {
                 </div>
               </label>
 
-              <label className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-3">
+              <label className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4 flex items-start gap-3">
                 <Gauge className="w-4 h-4 text-gray-500 mt-1" />
                 <div className="w-full">
                   <p className="text-xs uppercase tracking-wider text-gray-400 font-medium">
@@ -181,7 +181,7 @@ export const OdometerRoot = () => {
             )}
 
             {trip && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="inline-flex items-center gap-2 text-xs text-gray-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   {checkedCount} of {TOTAL_ITEMS} items marked as good
