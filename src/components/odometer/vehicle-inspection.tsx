@@ -36,7 +36,7 @@ export const VehicleInspection = ({
   );
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+    <div className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
           <h2 className="text-sm sm:text-base font-semibold text-gray-900">

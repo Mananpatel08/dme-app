@@ -1,5 +1,5 @@
 import { Message } from "@/types";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import React from "react";
 import { MessageBubble } from "../ui";
 import { formatChatDateLabel } from "@/utils/date";
@@ -13,6 +13,7 @@ interface MessageWindowProps {
   showScrollButton: boolean;
   handleScroll: () => void;
   isLoading: boolean;
+  isFetchingOlder?: boolean;
 }
 
 export const MessageWindow = ({
@@ -23,6 +24,7 @@ export const MessageWindow = ({
   showScrollButton,
   handleScroll,
   isLoading,
+  isFetchingOlder = false,
 }: MessageWindowProps) => {
   return (
     <div className="relative flex-1 overflow-hidden ">
@@ -32,7 +34,12 @@ export const MessageWindow = ({
         className="h-full overflow-y-auto px-2 py-4 vertical-scrollbar scrollbar-sm"
       >
         <div className="p-4 max-w-[950px] mx-auto w-full">
-          {isLoading ? (
+          {isFetchingOlder && (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="w-6 h-6 text-gray-600 animate-spin" />
+            </div>
+          )}
+          {isLoading && groupedMessages.length === 0 ? (
             <ChatSkeleton />
           ) : (
             groupedMessages.map((group) => (

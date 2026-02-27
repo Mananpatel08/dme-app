@@ -3,7 +3,7 @@
 import { useUserContext } from "@/context/userContext";
 import { Message } from "@/types";
 import { formatTime } from "@/utils/date";
-import { Circle, CircleCheck, Headset, User } from "lucide-react";
+import { Circle, CircleCheck, Eye, Headset, User } from "lucide-react";
 import React from "react";
 
 export const MessageBubble = ({ message }: { message: Message }) => {
@@ -52,9 +52,7 @@ export const MessageBubble = ({ message }: { message: Message }) => {
             <span className="text-[10px] text-gray-400">
               {formatTime(message.created_at)}
             </span>
-            {isMe && message.status && (
-              <StatusIcon status={message.status} />
-            )}
+            {isMe && message.status && <StatusIcon status={message.status} />}
           </div>
         </div>
       </div>
@@ -62,37 +60,13 @@ export const MessageBubble = ({ message }: { message: Message }) => {
   );
 };
 
-// function StatusIndicator({
-//   status,
-// }: {
-//   status: "sent" | "delivered" | "read";
-// }) {
-//   const color =
-//     status === "read"
-//       ? "text-blue-500"
-//       : status === "delivered"
-//         ? "text-gray-400"
-//         : "text-gray-300";
-
-//   return (
-//     <span className={`text-[10px] font-medium ${color}`}>
-//       {status === "sent"
-//         ? "Sent"
-//         : status === "delivered"
-//           ? "Delivered"
-//           : "Read"}
-//     </span>
-//   );
-// }
-
 function StatusIcon({ status }: { status: "sent" | "delivered" | "read" }) {
   if (status === "sent") return <Circle size={14} className="text-gray-400" />;
 
   if (status === "delivered")
     return <CircleCheck size={14} className="text-gray-400" />;
 
-  if (status === "read")
-    return <CircleCheck size={14} className="text-blue-500" />;
+  if (status === "read") return <Eye size={14} className="text-blue-500" />;
 
   return null;
 }

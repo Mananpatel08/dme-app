@@ -15,6 +15,7 @@ import {
   Search,
 } from "lucide-react";
 import { formatDate } from "@/utils/date";
+import { useRouter } from "next/navigation";
 
 export interface Trip {
   id: string;
@@ -153,8 +154,12 @@ function StatusBadge({ status }: { status: Trip["status"] }) {
 }
 
 function TripCard({ trip }: { trip: Trip }) {
+  const router = useRouter();
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+    <div
+      onClick={() => router.push(`/trip/${trip.id}/update`)}
+      className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 hover:shadow-md transition-shadow duration-200 overflow-hidden"
+    >
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
@@ -238,7 +243,7 @@ function EmptyState({ type }: { type: "pickup" | "return" }) {
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse">
+    <div className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4 animate-pulse">
       <div className="flex items-center gap-2.5 mb-3">
         <div className="w-9 h-9 rounded-full bg-gray-200" />
         <div className="flex-1">
@@ -295,7 +300,7 @@ export const TripList = ({
   return (
     <div className="flex flex-col gap-4 pb-20">
       {/* Date Selector */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white rounded-2xl border-[0.5px] border-gray-300 p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-rose-500" />
@@ -356,7 +361,7 @@ export const TripList = ({
       </div>
 
       {/* Tab Switcher */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1.5">
+      <div className="bg-white rounded-2xl border-[0.5px] border-gray-300 p-1.5">
         <div className="flex gap-1">
           <button
             onClick={() => setActiveTab("pickup")}
@@ -422,7 +427,7 @@ export const TripList = ({
 
       {/* Summary Bar */}
       {!loading && (pickup.length > 0 || returnList.length > 0) && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <div className="bg-white rounded-2xl border-[0.5px] border-gray-300 p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
               Daily Summary

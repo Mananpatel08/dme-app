@@ -24,7 +24,7 @@ export const TopNavbar = () => {
   };
 
   return (
-    <div className="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-40 border-b border-gray-100">
+    <div className="bg-white p-4 flex items-center justify-between sticky top-0 z-40 border-b-[0.5px] border-gray-300">
       <div className="flex items-center gap-3">
         <Image src={logo} alt="DME Logo" width={35} height={35} />
         <div>
