@@ -1,4 +1,4 @@
-import { SendHorizontal } from "lucide-react";
+import { Mic, SendHorizontal } from "lucide-react";
 import React from "react";
 
 interface InputBoxProps {
@@ -16,32 +16,34 @@ export const InputBox = ({
   handleKeyDown,
   handleSend,
 }: InputBoxProps) => {
+  const canSend = Boolean(inputText.trim());
+
   return (
-    <div className="sticky bottom-0 z-20 px-3 max-w-[950px] mx-auto w-full">
-      <div className="relative flex items-center">
+    <div className="sticky bottom-0 z-20 mx-auto w-full max-w-[980px] px-4 pb-3 pt-2 md:px-6">
+      <div className="flex items-end gap-2 rounded-3xl border border-[#E8EAEE] bg-white px-3 py-2 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <textarea
           ref={inputRef}
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          className="flex-1 shadow-sm text-base text-gray-800 placeholder-gray-400 resize-none outline-none py-2 px-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all max-h-[120px]"
+          rows={1}
+          placeholder="Write your message"
+          className="max-h-[120px] min-h-[24px] flex-1 resize-none border-0 bg-transparent px-1 py-[7px] vertical-scrollbar scrollbar-sm text-base text-slate-700 outline-none placeholder:text-slate-400"
         />
         <button
+          type="button"
           onClick={handleSend}
-          disabled={!inputText.trim()}
-          className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
-            inputText.trim()
-              ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-sm hover:shadow active:scale-95"
-              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+          disabled={!canSend}
+          aria-label="Send message"
+          className={`mb-0.5 grid h-8 w-8 place-items-center rounded-full transition-all duration-200 ${
+            canSend
+              ? "bg-rose-500 text-white hover:bg-[#0668D9] active:scale-95"
+              : "cursor-not-allowed bg-[#DDE3EB] text-white"
           }`}
         >
-          <SendHorizontal className="w-4.5 h-4.5" strokeWidth={2.5} />
+          <SendHorizontal className="h-4 w-4" strokeWidth={2.4} />
         </button>
       </div>
-      {/* <p className="text-[10px] text-gray-400 mt-2 px-1">
-            Press Enter to send, Shift+Enter for new line
-          </p> */}
     </div>
   );
 };

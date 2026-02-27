@@ -1,54 +1,54 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { InputBox } from "./input-box";
 import { MessagesHeader } from "./header";
 import { MessageWindow } from "./message-window";
-import { Message } from "@/types";
-import { SAMPLE_MESSAGES } from "@/utils/constants";
-import { formatCurrentTime } from "@/utils/helper";
+import {
+  IncomingMessage,
+  IncomingStatusUpdate,
+  Message,
+  OutgoingMessage,
+  OutgoingStatusUpdate,
+} from "@/types";
+import { groupMessagesByDate } from "@/utils/helper";
+import { useGetMessagesQuery } from "@/api/messages";
+import { chatSocket } from "@/services/message/chatSocket";
+import { useUserContext } from "@/context/userContext";
 
-interface MessagesProps {
-  messages?: Message[];
-  onSendMessage?: (text: string) => void;
-}
-
-export const MessagesRoot = ({
-  messages: controlledMessages,
-  onSendMessage,
-}: MessagesProps) => {
-  const [internalMessages, setInternalMessages] =
-    useState<Message[]>(SAMPLE_MESSAGES);
-  const [inputText, setInputText] = useState("");
-  const [showScrollButton, setShowScrollButton] = useState(false);
+export const MessagesRoot = () => {
+  // useRefs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // useStates
+  const [inputText, setInputText] = useState("");
+  const [page, setPage] = useState(1);
+  const [LiveMessages, setLiveMessages] = useState<Message[]>([]);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  // useContexts
+  const { userDetails } = useUserContext();
+  // derived states
+  const userId = userDetails?.id;
+  const chatRoomId = 1;
+  // queries
+  const { data: messagesData, isLoading: isMessagesLoading } =
+    useGetMessagesQuery(chatRoomId, page);
+  // derived states
+  const ApiMessages = (messagesData?.data.results ?? []).slice().reverse();
+  const messages = useMemo(() => {
+    return [...ApiMessages, ...LiveMessages];
+  }, [ApiMessages, LiveMessages]);
+  const groupedMessages = groupMessagesByDate(messages);
 
-  const messages = controlledMessages ?? internalMessages;
-  const [currentTime, setCurrentTime] = useState(formatCurrentTime());
-
-  useEffect(() => {
-    const interval = setInterval(
-      () => setCurrentTime(formatCurrentTime()),
-      30000,
-    );
-    return () => clearInterval(interval);
-  }, []);
-
-  const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: smooth ? "smooth" : "instant",
-    });
+  // function
+  const markRoomAsRead = () => {
+    const newStatus: OutgoingStatusUpdate = {
+      action: "mark_read",
+      room_id: chatRoomId,
+    };
+    chatSocket.send(newStatus);
   };
-
-  useEffect(() => {
-    scrollToBottom(false);
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages.length]);
 
   const handleScroll = () => {
     const el = scrollContainerRef.current;
@@ -61,18 +61,23 @@ export const MessagesRoot = ({
     const trimmed = inputText.trim();
     if (!trimmed) return;
 
-    if (onSendMessage) {
-      onSendMessage(trimmed);
-    } else {
-      const newMsg: Message = {
-        id: Date.now().toString(),
-        text: trimmed,
-        sender: "driver",
-        timestamp: formatCurrentTime(),
-        status: "sent",
-      };
-      setInternalMessages((prev) => [...prev, newMsg]);
-    }
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      chat_room: chatRoomId,
+      message: trimmed,
+      sender: userId ?? 0,
+      created_at: new Date().toISOString(),
+    };
+
+    setLiveMessages((prev) => [...prev, optimisticMessage]);
+
+    const newMsg: OutgoingMessage = {
+      action: "send_message",
+      room_id: chatRoomId,
+      message: trimmed,
+    };
+    chatSocket.send(newMsg);
+
     setInputText("");
 
     if (inputRef.current) {
@@ -94,24 +99,83 @@ export const MessagesRoot = ({
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
-  const todayLabel = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: smooth ? "smooth" : "instant",
+    });
+  };
+
+  // useEffects
+  useEffect(() => {
+    const handleMessage = (data: IncomingMessage | IncomingStatusUpdate) => {
+      if (data.type === "status_update") {
+        setLiveMessages((prev) =>
+          prev.map((msg) =>
+            data.message_ids.includes(Number(msg.id))
+              ? { ...msg, status: data.status }
+              : msg,
+          ),
+        );
+        return;
+      }
+
+      if (data.type === "chat_message") {
+        setLiveMessages((prev) => {
+          const tempIndex = prev.findIndex(
+            (msg) =>
+              typeof msg.id === "string" &&
+              msg.id.startsWith("temp-") &&
+              msg.sender === data.sender &&
+              msg.message === data.message,
+          );
+
+          if (tempIndex !== -1) {
+            const updated = [...prev];
+            updated[tempIndex] = data;
+            return updated;
+          }
+
+          return [...prev, data];
+        });
+
+        const isMine = data.sender === userId;
+
+        if (!isMine) {
+          markRoomAsRead();
+        }
+      }
+    };
+
+    chatSocket.subscribe(handleMessage);
+    return () => {
+      chatSocket.unsubscribe(handleMessage);
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    scrollToBottom(false);
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages.length]);
+
+  useEffect(() => {
+    markRoomAsRead();
+  }, []);
 
   return (
-    <div className="flex h-[calc(100vh-7.8rem)] flex-col overflow-hidden">
-      <MessagesHeader currentTime={currentTime} />
+    <div className="flex h-[calc(100vh-8.5rem)] flex-col overflow-hidden">
+      <MessagesHeader />
 
       <MessageWindow
-        messages={messages}
-        todayLabel={todayLabel}
+        groupedMessages={groupedMessages}
         scrollContainerRef={scrollContainerRef}
         messagesEndRef={messagesEndRef}
         scrollToBottom={scrollToBottom}
         showScrollButton={showScrollButton}
         handleScroll={handleScroll}
+        isLoading={isMessagesLoading}
       />
 
       <InputBox

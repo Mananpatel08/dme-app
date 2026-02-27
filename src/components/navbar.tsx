@@ -4,29 +4,32 @@ import React from "react";
 import Image from "next/image";
 import logo from "@/assets/images/dme_logo.png";
 import { LogOut, RefreshCcw } from "lucide-react";
+import { useUserContext } from "@/context/userContext";
+import { getUsername } from "@/utils/helper";
 import AuthService from "@/services/auth";
 
-interface TopNavbarProps {
-  username?: string;
-}
+export const TopNavbar = () => {
+  const { userDetails } = useUserContext();
 
-export const TopNavbar = ({ username = "Manan" }: TopNavbarProps) => {
+  const authService = new AuthService();
+
   const handleRefresh = () => {
-    console.log("Refresh clicked");
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
   };
 
   const handleLogout = () => {
-    new AuthService().removeToken();
-    window.location.href = "/login";
+    authService.removeToken();
   };
 
   return (
-    <div className="bg-white shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-gray-100">
+    <div className="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-40 border-b border-gray-100">
       <div className="flex items-center gap-3">
         <Image src={logo} alt="DME Logo" width={35} height={35} />
         <div>
           <p className="text-sm font-semibold text-gray-800">
-            Welcome, {username}
+            Welcome, {getUsername(userDetails)}
           </p>
         </div>
       </div>

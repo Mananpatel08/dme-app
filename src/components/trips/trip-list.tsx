@@ -14,6 +14,7 @@ import {
   ArrowDownToLine,
   Search,
 } from "lucide-react";
+import { formatDate } from "@/utils/date";
 
 export interface Trip {
   id: string;
@@ -114,15 +115,6 @@ const STATUS_CONFIG = {
     dot: "bg-red-500",
   },
 };
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 function formatShortDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
@@ -334,7 +326,8 @@ export const TripList = ({
               type="date"
               value={toInputDateString(date)}
               onChange={(e) => {
-                if (e.target.value) setDate(new Date(e.target.value + "T00:00:00"));
+                if (e.target.value)
+                  setDate(new Date(e.target.value + "T00:00:00"));
               }}
               className="w-full text-center text-sm font-medium text-gray-800 py-2 px-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-400 transition-all cursor-pointer"
             />

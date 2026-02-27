@@ -1,42 +1,4 @@
-import { InspectionItem, Message } from "@/types";
-
-export const SAMPLE_MESSAGES: Message[] = [
-  {
-    id: "1",
-    text: "Good morning! Your first pickup is at 123 Main St.",
-    sender: "dispatcher",
-    timestamp: "7:45 AM",
-    status: "read",
-  },
-  {
-    id: "2",
-    text: "ok",
-    sender: "driver",
-    timestamp: "7:46 AM",
-    status: "read",
-  },
-  {
-    id: "3",
-    text: "Heads up — the patient at Oak Ave needs a wheelchair. Please confirm when you arrive.",
-    sender: "dispatcher",
-    timestamp: "8:10 AM",
-    status: "read",
-  },
-  {
-    id: "4",
-    text: "I am here",
-    sender: "driver",
-    timestamp: "8:28 AM",
-    status: "delivered",
-  },
-  {
-    id: "5",
-    text: "hey",
-    sender: "driver",
-    timestamp: "8:35 AM",
-    status: "sent",
-  },
-];
+import { InspectionItem } from "@/types";
 
 export interface InspectionSchemaItem {
   id: string;

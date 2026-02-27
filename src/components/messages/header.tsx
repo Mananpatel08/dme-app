@@ -1,7 +1,8 @@
-import { Clock, Headset } from "lucide-react";
+import { Headset } from "lucide-react";
 import React from "react";
+import { Clock } from "../ui";
 
-export const MessagesHeader = ({ currentTime }: { currentTime: string }) => {
+export const MessagesHeader = () => {
   return (
     <div className="sticky top-0 z-20 shadow-sm bg-white border-b border-gray-100 p-4">
       <div className="flex items-center justify-between">
@@ -17,12 +18,7 @@ export const MessagesHeader = ({ currentTime }: { currentTime: string }) => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-100">
-          <Clock className="w-3.5 h-3.5 text-gray-400" />
-          <span className="text-xs font-medium text-gray-600">
-            {currentTime}
-          </span>
-        </div>
+        <Clock />
       </div>
     </div>
   );
