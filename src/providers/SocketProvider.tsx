@@ -2,6 +2,7 @@
 
 import { useUserContext } from "@/context/userContext";
 import { chatSocket } from "@/services/message/chatSocket";
+import CookiePersistence from "@/utils/cookiePersistence";
 import { useEffect } from "react";
 
 export default function SocketProvider({
@@ -12,13 +13,15 @@ export default function SocketProvider({
   const { userDetails, isProfileLoading } = useUserContext();
   const userId = userDetails?.id;
 
+  const token = new CookiePersistence().getItem("token");
+
   useEffect(() => {
     if (isProfileLoading) return;
 
     if (!userId) return;
 
-    chatSocket.connect("/ws/dme/");
-  }, [userId, isProfileLoading]);
+      chatSocket.connect(`/ws/dme/?token=${token}`);
+  }, [userId, isProfileLoading, token]);
 
   useEffect(() => {
     return () => {

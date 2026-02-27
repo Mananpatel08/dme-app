@@ -1,4 +1,8 @@
-import { IncomingMessage, OutgoingMessage, OutgoingStatusUpdate } from "@/types";
+import {
+  IncomingMessage,
+  OutgoingMessage,
+  OutgoingStatusUpdate,
+} from "@/types";
 
 type MessageHandler = (data: IncomingMessage) => void;
 
@@ -7,7 +11,11 @@ class ChatSocketService {
   private handlers: Set<MessageHandler> = new Set();
   private baseURL: string;
   private currentPath: string | null = null;
+
   private reconnectInterval = 3000;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+
   private manualClose = false;
 
   constructor() {
@@ -31,6 +39,7 @@ class ChatSocketService {
 
     this.socket.onopen = () => {
       console.log("WebSocket connected:", fullURL);
+      this.reconnectAttempts = 0;
     };
 
     this.socket.onmessage = (event) => {
@@ -41,10 +50,22 @@ class ChatSocketService {
     this.socket.onclose = () => {
       console.log("WebSocket disconnected");
 
-      if (!this.manualClose && this.currentPath) {
+      if (
+        !this.manualClose &&
+        this.currentPath &&
+        this.reconnectAttempts < this.maxReconnectAttempts
+      ) {
+        this.reconnectAttempts++;
+
+        console.log(
+          `Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
+        );
+
         setTimeout(() => {
           this.connect(this.currentPath!);
         }, this.reconnectInterval);
+      } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        console.warn("Max reconnect attempts reached. Giving up.");
       }
     };
 

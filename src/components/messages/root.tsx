@@ -165,7 +165,7 @@ export const MessagesRoot = () => {
   }, []);
 
   return (
-    <div className="flex h-[calc(100vh-7.8rem)] flex-col overflow-hidden">
+    <div className="flex h-[calc(100vh-8.5rem)] flex-col overflow-hidden">
       <MessagesHeader />
 
       <MessageWindow
