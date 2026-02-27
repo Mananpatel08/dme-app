@@ -23,6 +23,10 @@ class ChatSocketService {
       process.env.NEXT_PUBLIC_WEBSOCKET_BASE_URL || "ws://localhost:8000";
   }
 
+  isConnected() {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+
   connect(path: string) {
     if (
       this.socket?.readyState === WebSocket.OPEN ||

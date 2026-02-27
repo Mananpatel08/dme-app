@@ -1,5 +1,11 @@
 import * as Yup from "yup";
-import { FLUIDS_SCHEMA, GENERAL_SCHEMA } from "@/utils/constants";
+import type {
+  FluidInspectionFormItem,
+  GeneralInspectionFormItem,
+  InspectionStatus,
+  TripInspectionFormValues,
+} from "@/types";
+import { GENERAL_SCHEMA } from "./constants";
 
 export const loginSchema = Yup.object({
   username: Yup.string().required("Username is required"),
@@ -8,15 +14,35 @@ export const loginSchema = Yup.object({
     .min(6, "Password must be at least 6 characters"),
 });
 
-const SAFETY_KEYS = GENERAL_SCHEMA.filter((item) => item.group === "safety").map(
-  (item) => item.formKey,
+const fluidItemSchema: Yup.ObjectSchema<FluidInspectionFormItem> = Yup.object({
+  key: Yup.string().required(),
+  status: Yup.mixed<InspectionStatus>().oneOf([0, 1] as const).required(),
+  added: Yup.boolean().required(),
+  comments: Yup.string().optional(),
+});
+
+const generalItemSchema: Yup.ObjectSchema<GeneralInspectionFormItem> = Yup.object(
+  {
+    key: Yup.string().required(),
+    status: Yup.mixed<InspectionStatus>().oneOf([0, 1] as const).required(),
+    comments: Yup.string().optional(),
+  },
 );
 
-const EXTERIOR_KEYS = GENERAL_SCHEMA.filter(
-  (item) => item.group === "exterior",
-).map((item) => item.formKey);
+const SAFETY_KEYS = new Set(
+  GENERAL_SCHEMA.filter((item) => item.group === "safety").map(
+    (item) => item.formKey,
+  ),
+);
 
-export const vehicleInspectionSchema = Yup.object({
+const EXTERIOR_KEYS = new Set(
+  GENERAL_SCHEMA.filter((item) => item.group === "exterior").map(
+    (item) => item.formKey,
+  ),
+);
+
+export const vehicleInspectionSchema: Yup.ObjectSchema<TripInspectionFormValues> =
+  Yup.object({
   vehicle: Yup.string().required("Vehicle is required"),
   trip: Yup.string().required("Trip is required"),
   trip_name: Yup.string().required("Trip name is required"),
@@ -27,7 +53,8 @@ export const vehicleInspectionSchema = Yup.object({
     .test(
       "is-number",
       "Start reading must be a number",
-      (value) => value !== undefined && value !== "" && !Number.isNaN(Number(value)),
+      (value) =>
+        value !== undefined && value !== "" && !Number.isNaN(Number(value)),
     )
     .test(
       "non-negative",
@@ -35,43 +62,35 @@ export const vehicleInspectionSchema = Yup.object({
       (value) => Number(value) >= 0,
     ),
   fluids: Yup.array()
-    .of(
-      Yup.object({
-        key: Yup.string().required(),
-        status: Yup.number().oneOf([0, 1]).required(),
-        added: Yup.boolean().required(),
-        comments: Yup.string().nullable(),
-      }),
-    )
+    .of(fluidItemSchema)
+    .required("Fluids are required")
     .test(
-      "fluids-one-selected",
+      "at-least-one-fluid-selected",
       "Select at least one item in the Fluids section.",
-      (value) => !!value && value.some((item) => item?.status === 1),
-    ),
+      (value) => (value ?? []).some((item) => item.status === 1),
+    )
+    .min(1, "Select at least one item in the Fluids section."),
   general: Yup.array()
-    .of(
-      Yup.object({
-        key: Yup.string().required(),
-        status: Yup.number().oneOf([0, 1]).required(),
-        comments: Yup.string().nullable(),
-      }),
+    .of(generalItemSchema)
+    .required("Safety and Exterior & Compliance are required")
+    .test(
+      "at-least-one-safety-selected",
+      "Please select at least one item in the Safety section.",
+      (value) =>
+        (value ?? []).some(
+          (item) => SAFETY_KEYS.has(item.key) && item.status === 1,
+        ),
     )
     .test(
-      "safety-and-exterior-selected",
+      "at-least-one-exterior-selected",
+      "Please select at least one item in the Exterior & Compliance section.",
+      (value) =>
+        (value ?? []).some(
+          (item) => EXTERIOR_KEYS.has(item.key) && item.status === 1,
+        ),
+    )
+    .min(
+      1,
       "Select at least one item in both Safety and Exterior & Compliance sections.",
-      (value) => {
-        if (!value) return false;
-
-        const hasSafety = value.some(
-          (item) => SAFETY_KEYS.includes(item?.key as string) && item?.status === 1,
-        );  
-
-        const hasExterior = value.some(
-          (item) =>
-            EXTERIOR_KEYS.includes(item?.key as string) && item?.status === 1,
-        );
-
-        return hasSafety && hasExterior;
-      },
     ),
-});
+  });

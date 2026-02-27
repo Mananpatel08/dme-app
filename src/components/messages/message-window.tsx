@@ -1,5 +1,5 @@
 import { Message } from "@/types";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, MessageCircle } from "lucide-react";
 import React from "react";
 import { MessageBubble } from "../ui";
 import { formatChatDateLabel } from "@/utils/date";
@@ -14,6 +14,7 @@ interface MessageWindowProps {
   handleScroll: () => void;
   isLoading: boolean;
   isFetchingOlder?: boolean;
+  hasFetchedMessages?: boolean;
 }
 
 export const MessageWindow = ({
@@ -25,6 +26,7 @@ export const MessageWindow = ({
   handleScroll,
   isLoading,
   isFetchingOlder = false,
+  hasFetchedMessages = false,
 }: MessageWindowProps) => {
   return (
     <div className="relative flex-1 overflow-hidden ">
@@ -41,6 +43,20 @@ export const MessageWindow = ({
           )}
           {isLoading && groupedMessages.length === 0 ? (
             <ChatSkeleton />
+          ) : groupedMessages.length === 0 && hasFetchedMessages ? (
+            <div className="min-h-[58vh] flex items-center justify-center">
+              <div className="w-full max-w-md p-6 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white">
+                  <MessageCircle className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900">
+                  No messages yet
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Start a conversation by sending your first message.
+                </p>
+              </div>
+            </div>
           ) : (
             groupedMessages.map((group) => (
               <div key={group.date}>

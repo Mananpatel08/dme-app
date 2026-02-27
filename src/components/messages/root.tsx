@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useRef, useEffect, useMemo, useLayoutEffect } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useMemo,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { InputBox } from "./input-box";
 import { MessagesHeader } from "./header";
 import { MessageWindow } from "./message-window";
@@ -31,7 +37,9 @@ export const MessagesRoot = () => {
   // store actions
   const setInputText = useChatStore((state) => state.setInputText);
   const incrementPage = useChatStore((state) => state.incrementPage);
-  const setShowScrollButton = useChatStore((state) => state.setShowScrollButton);
+  const setShowScrollButton = useChatStore(
+    (state) => state.setShowScrollButton,
+  );
   const mergeApiMessages = useChatStore((state) => state.mergeApiMessages);
   const resetInputText = useChatStore((state) => state.resetInputText);
   const addOptimisticMessage = useChatStore(
@@ -50,14 +58,14 @@ export const MessagesRoot = () => {
   const hasInitialApiScrollRef = useRef(false);
   // derived states
   const userId = userDetails?.id;
-  const chatRoomId = 1;
+  const chatRoomId = userDetails?.chat_room ?? 0;
   // queries
   const {
     data: messagesData,
     isLoading: isMessagesLoading,
     isFetching: isMessagesFetching,
-  } =
-    useGetMessagesQuery(chatRoomId, page);
+    isFetched: hasFetchedMessages,
+  } = useGetMessagesQuery(chatRoomId, page);
   // derived states
   const messages = useMemo(() => {
     return [...apiMessages, ...liveMessages];
@@ -66,13 +74,17 @@ export const MessagesRoot = () => {
   const isInitialLoading = isMessagesLoading && messages.length === 0;
 
   // function
-  const markRoomAsRead = () => {
+  const markRoomAsRead = useCallback(() => {
+    if (!chatRoomId) return;
+    if (!chatSocket.isConnected()) return;
+
     const newStatus: OutgoingStatusUpdate = {
       action: "mark_read",
       room_id: chatRoomId,
     };
+
     chatSocket.send(newStatus);
-  };
+  }, [chatRoomId]);
 
   const handleScroll = () => {
     const el = scrollContainerRef.current;
@@ -96,6 +108,7 @@ export const MessagesRoot = () => {
   };
 
   const handleSend = () => {
+    if (!chatRoomId) return;
     const trimmed = inputText.trim();
     if (!trimmed) return;
 
@@ -155,7 +168,8 @@ export const MessagesRoot = () => {
     if (!el || !pendingRestore) return;
 
     const newHeight = el.scrollHeight;
-    el.scrollTop = newHeight - pendingRestore.previousHeight + pendingRestore.previousTop;
+    el.scrollTop =
+      newHeight - pendingRestore.previousHeight + pendingRestore.previousTop;
     pendingScrollRestoreRef.current = null;
   }, [apiMessages.length]);
 
@@ -181,7 +195,7 @@ export const MessagesRoot = () => {
     return () => {
       chatSocket.unsubscribe(handleMessage);
     };
-  }, [applyStatusUpdate, upsertIncomingMessage, userId]);
+  }, [applyStatusUpdate, markRoomAsRead, upsertIncomingMessage, userId]);
 
   useEffect(() => {
     if (!hasInitialApiScrollRef.current && apiMessages.length > 0) {
@@ -198,7 +212,7 @@ export const MessagesRoot = () => {
 
   useEffect(() => {
     markRoomAsRead();
-  }, []);
+  }, [markRoomAsRead]);
 
   return (
     <div className="flex h-[calc(100vh-8.5rem)] flex-col overflow-hidden">
@@ -213,6 +227,7 @@ export const MessagesRoot = () => {
         handleScroll={handleScroll}
         isLoading={isInitialLoading}
         isFetchingOlder={isMessagesFetching && page > 1}
+        hasFetchedMessages={hasFetchedMessages}
       />
 
       <InputBox

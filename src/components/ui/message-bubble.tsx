@@ -34,7 +34,7 @@ export const MessageBubble = ({ message }: { message: Message }) => {
         {/* Bubble */}
         <div>
           <div
-            className={`px-3 py-2 text-sm leading-relaxed break-all ${
+            className={`px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap ${
               isMe
                 ? "bg-rose-500 text-white rounded-xl rounded-tr-md"
                 : "bg-white text-gray-800 rounded-xl rounded-tl-md border border-gray-100 shadow-sm"

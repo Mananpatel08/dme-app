@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { CarFront, FileCheck2, Gauge, CheckCircle2, X } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { CarFront, FileCheck2, Gauge, CheckCircle2 } from "lucide-react";
 import Dropdown from "../ui/dropdown";
 import { VehicleInspection } from "./vehicle-inspection";
 import { useGetVehiclesQuery, useVehicleInspectionQuery } from "@/api/vehicle";
@@ -33,25 +33,50 @@ import {
 import { yupResolver } from "@hookform/resolvers/yup";
 import { vehicleInspectionSchema } from "@/utils/validationSchema";
 import { getCurrentDate, getCurrentTime } from "@/utils/date";
-import { Clock } from "../ui";
+import { Clock, Notification, type NotificationType } from "../ui";
 
 export const OdometerRoot = () => {
+  type ApiErrorItem = {
+    source?: string;
+    detail?: string;
+  };
+
+  type ApiErrorResponse = {
+    message?: string;
+    error?: ApiErrorItem[];
+  };
+
+  const extractFirstErrorMessage = (value: unknown): string | null => {
+    if (!value || typeof value !== "object") return null;
+
+    const maybeErrorWithMessage = value as { message?: unknown };
+    if (typeof maybeErrorWithMessage.message === "string") {
+      return maybeErrorWithMessage.message;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const message = extractFirstErrorMessage(item);
+        if (message) return message;
+      }
+      return null;
+    }
+
+    for (const nestedValue of Object.values(value as Record<string, unknown>)) {
+      const message = extractFirstErrorMessage(nestedValue);
+      if (message) return message;
+    }
+
+    return null;
+  };
+
   // State
   const [mode, setMode] = useState<string>("pre_trip");
   const [notification, setNotification] = useState<{
-    type: "success" | "error";
+    type: NotificationType;
     message: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (!notification) return;
-
-    const timer = setTimeout(() => {
-      setNotification(null);
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [notification]);
   // Queries
   const { data: vehicles } = useGetVehiclesQuery();
   const { mutateAsync: vehicleInspection } = useVehicleInspectionQuery();
@@ -97,7 +122,7 @@ export const OdometerRoot = () => {
         comments: "",
       })),
     },
-    resolver: yupResolver(vehicleInspectionSchema) as any,
+    resolver: yupResolver(vehicleInspectionSchema),
   });
   const {
     handleSubmit,
@@ -120,52 +145,6 @@ export const OdometerRoot = () => {
 
   const onSubmit = async (data: TripInspectionFormValues) => {
     setNotification(null);
-
-    if (!data.vehicle || !data.trip) return;
-
-    const hasFluidSelected = data.fluids?.some((item) => item.status === 1);
-
-    const safetyKeys = GENERAL_SCHEMA.filter(
-      (item) => item.group === "safety",
-    ).map((item) => item.formKey);
-
-    const exteriorKeys = GENERAL_SCHEMA.filter(
-      (item) => item.group === "exterior",
-    ).map((item) => item.formKey);
-
-    const hasSafetySelected = data.general?.some(
-      (item) => safetyKeys.includes(item.key) && item.status === 1,
-    );
-
-    const hasExteriorSelected = data.general?.some(
-      (item) => exteriorKeys.includes(item.key) && item.status === 1,
-    );
-
-    if (!hasFluidSelected || !hasSafetySelected || !hasExteriorSelected) {
-      if (!hasFluidSelected) {
-        setError("fluids" as any, {
-          type: "manual",
-          message: "Select at least one item in the Fluids section.",
-        });
-      }
-
-      if (!hasSafetySelected || !hasExteriorSelected) {
-        const parts: string[] = [];
-        if (!hasSafetySelected) {
-          parts.push("at least one item in the Safety section");
-        }
-        if (!hasExteriorSelected) {
-          parts.push("at least one item in the Exterior & Compliance section");
-        }
-
-        setError("general" as any, {
-          type: "manual",
-          message: `Please select ${parts.join(" and ")}.`,
-        });
-      }
-
-      return;
-    }
 
     const selectedTrip = trips?.data?.results?.find(
       (tripItem) => Number(tripItem.id) === Number(data.trip),
@@ -213,17 +192,22 @@ export const OdometerRoot = () => {
       });
 
       setMode("pre_trip");
-    } catch (error: any) {
-      const responseData = error?.response?.data;
+    } catch (error: unknown) {
+      const responseData = (error as { response?: { data?: ApiErrorResponse } })
+        ?.response?.data;
 
       let fieldErrorApplied = false;
 
       if (Array.isArray(responseData?.error)) {
-        responseData.error.forEach((errItem: any) => {
+        responseData.error.forEach((errItem) => {
           if (errItem?.source && errItem?.detail) {
-            const source = errItem.source as keyof TripInspectionFormValues;
+            const source = errItem.source;
 
-            if (["vehicle", "trip", "start_reading"].includes(source)) {
+            if (
+              source === "vehicle" ||
+              source === "trip" ||
+              source === "start_reading"
+            ) {
               setError(source, {
                 type: "server",
                 message: errItem.detail,
@@ -243,34 +227,19 @@ export const OdometerRoot = () => {
     }
   };
 
-  const onError: SubmitErrorHandler<TripInspectionFormValues> = () => {
+  const onError: SubmitErrorHandler<TripInspectionFormValues> = (formErrors) => {
+    const schemaErrorMessage = extractFirstErrorMessage(formErrors);
+
     setNotification({
       type: "error",
-      message: "Please fill all required fields and checklist sections.",
+      message:
+        schemaErrorMessage ??
+        "Please fill all required fields and checklist sections.",
     });
   };
 
   return (
     <div className="px-4 py-4 sm:px-6 sm:py-6 ">
-      {notification && (
-        <div
-          className={`fixed top-4 right-4 z-50 max-w-sm rounded-xl border px-4 py-3 shadow-lg text-sm font-medium flex items-start gap-3 ${
-            notification.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-red-50 border-red-200 text-red-800"
-          }`}
-        >
-          <span className="flex-1">{notification.message}</span>
-          <button
-            type="button"
-            onClick={() => setNotification(null)}
-            className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
-            aria-label="Close notification"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
       <div className="max-w-6xl mx-auto space-y-4">
         <div className="bg-white rounded-2xl border border-gray-100 border-[0.5px] border-gray-300 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -336,11 +305,16 @@ export const OdometerRoot = () => {
                     type="number"
                     min={0}
                     placeholder="e.g. 102545"
-                    className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base text-gray-800 outline-none focus:ring-2 focus:ring-rose-100 focus:border-rose-300"
+                    className={`
+                      mt-2 w-full rounded-xl border 
+                      ${errors.start_reading ? "border-red-600" : "border-gray-200"} 
+                      bg-gray-50 px-3 py-2.5 text-base text-gray-800 outline-none 
+                      focus:ring-2 focus:ring-rose-100 focus:border-rose-300
+                    `}
                   />
                   {errors.start_reading && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {errors.start_reading.message as string}
+                    <p className="mt-2 text-sm text-red-600">
+                      {errors.start_reading.message}
                     </p>
                   )}
                 </div>
@@ -359,6 +333,13 @@ export const OdometerRoot = () => {
 
             {trip && (
               <VehicleInspection progress={progress} control={control} />
+            )}
+
+            {notification && (
+              <Notification
+                notification={notification}
+                onClose={() => setNotification(null)}
+              />
             )}
 
             {trip && (
