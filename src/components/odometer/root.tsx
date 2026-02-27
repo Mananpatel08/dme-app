@@ -1,17 +1,24 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   CarFront,
   Clock3,
   FileCheck2,
   Gauge,
   CheckCircle2,
+  X,
 } from "lucide-react";
 import Dropdown from "../ui/dropdown";
 import { VehicleInspection } from "./vehicle-inspection";
-import { useGetVehiclesQuery } from "@/api/vehicle";
-import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
+import { useGetVehiclesQuery, useVehicleInspectionQuery } from "@/api/vehicle";
+import {
+  Controller,
+  FormProvider,
+  SubmitErrorHandler,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 import { useGetTripsQuery } from "@/api/trips";
 import {
   Trip,
@@ -35,12 +42,29 @@ import {
   getCurrentLocalTime,
   getCurrentTime,
 } from "@/utils/helper";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { vehicleInspectionSchema } from "@/utils/validationSchema";
 
 export const OdometerRoot = () => {
   // State
   const [mode, setMode] = useState<string>("pre_trip");
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!notification) return;
+
+    const timer = setTimeout(() => {
+      setNotification(null);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [notification]);
   // Queries
   const { data: vehicles } = useGetVehiclesQuery();
+  const { mutateAsync: vehicleInspection } = useVehicleInspectionQuery();
   const { data: trips } = useGetTripsQuery();
   // Memos
   const vehicleOptions = useMemo(() => {
@@ -84,8 +108,16 @@ export const OdometerRoot = () => {
         comments: "",
       })),
     },
+    resolver: yupResolver(vehicleInspectionSchema) as any,
   });
-  const { handleSubmit, register, control } = methods;
+  const {
+    handleSubmit,
+    register,
+    control,
+    formState: { errors },
+    setError,
+    reset,
+  } = methods;
   // Watches
   const { vehicle, trip, fluids, general } = useWatch({
     control,
@@ -97,8 +129,54 @@ export const OdometerRoot = () => {
 
   const progress = Math.round((checkedCount / TOTAL_ITEMS) * 100);
 
-  const onSubmit = (data: TripInspectionFormValues) => {
+  const onSubmit = async (data: TripInspectionFormValues) => {
+    setNotification(null);
+
     if (!data.vehicle || !data.trip) return;
+
+    const hasFluidSelected = data.fluids?.some((item) => item.status === 1);
+
+    const safetyKeys = GENERAL_SCHEMA.filter(
+      (item) => item.group === "safety",
+    ).map((item) => item.formKey);
+
+    const exteriorKeys = GENERAL_SCHEMA.filter(
+      (item) => item.group === "exterior",
+    ).map((item) => item.formKey);
+
+    const hasSafetySelected = data.general?.some(
+      (item) => safetyKeys.includes(item.key) && item.status === 1,
+    );
+
+    const hasExteriorSelected = data.general?.some(
+      (item) => exteriorKeys.includes(item.key) && item.status === 1,
+    );
+
+    if (!hasFluidSelected || !hasSafetySelected || !hasExteriorSelected) {
+      if (!hasFluidSelected) {
+        setError("fluids" as any, {
+          type: "manual",
+          message: "Select at least one item in the Fluids section.",
+        });
+      }
+
+      if (!hasSafetySelected || !hasExteriorSelected) {
+        const parts: string[] = [];
+        if (!hasSafetySelected) {
+          parts.push("at least one item in the Safety section");
+        }
+        if (!hasExteriorSelected) {
+          parts.push("at least one item in the Exterior & Compliance section");
+        }
+
+        setError("general" as any, {
+          type: "manual",
+          message: `Please select ${parts.join(" and ")}.`,
+        });
+      }
+
+      return;
+    }
 
     const selectedTrip = trips?.data?.results?.find(
       (tripItem) => Number(tripItem.id) === Number(data.trip),
@@ -110,12 +188,100 @@ export const OdometerRoot = () => {
       ...buildGeneralPayload(data.general),
     };
 
-    console.log("TripInspectionPayload", payload);
-    // TODO: send payload to backend mutation when API endpoint is ready.
+    try {
+      const response = await vehicleInspection(payload);
+
+      if (response?.message) {
+        setNotification({
+          type: "success",
+          message: response.message,
+        });
+      } else {
+        setNotification({
+          type: "success",
+          message: "Vehicle inspection submitted successfully.",
+        });
+      }
+
+      reset({
+        vehicle: undefined,
+        trip: undefined,
+        trip_name: "pre_trip",
+        trip_date: getCurrentDate(),
+        start_time: getCurrentTime(),
+        start_reading: "",
+        fluids: FLUIDS_SCHEMA.map((item) => ({
+          key: item.formKey,
+          status: 0,
+          added: false,
+          comments: "",
+        })),
+        general: GENERAL_SCHEMA.map((item) => ({
+          key: item.formKey,
+          status: 0,
+          comments: "",
+        })),
+      });
+
+      setMode("pre_trip");
+    } catch (error: any) {
+      const responseData = error?.response?.data;
+
+      let fieldErrorApplied = false;
+
+      if (Array.isArray(responseData?.error)) {
+        responseData.error.forEach((errItem: any) => {
+          if (errItem?.source && errItem?.detail) {
+            const source = errItem.source as keyof TripInspectionFormValues;
+
+            if (["vehicle", "trip", "start_reading"].includes(source)) {
+              setError(source, {
+                type: "server",
+                message: errItem.detail,
+              });
+              fieldErrorApplied = true;
+            }
+          }
+        });
+      }
+
+      if (!fieldErrorApplied && responseData?.message) {
+        setNotification({
+          type: "error",
+          message: responseData.message,
+        });
+      }
+    }
+  };
+
+  const onError: SubmitErrorHandler<TripInspectionFormValues> = () => {
+    setNotification({
+      type: "error",
+      message: "Please fill all required fields and checklist sections.",
+    });
   };
 
   return (
     <div className="px-4 py-4 sm:px-6 sm:py-6 ">
+      {notification && (
+        <div
+          className={`fixed top-4 right-4 z-50 max-w-sm rounded-xl border px-4 py-3 shadow-lg text-sm font-medium flex items-start gap-3 ${
+            notification.type === "success"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-red-50 border-red-200 text-red-800"
+          }`}
+        >
+          <span className="flex-1">{notification.message}</span>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
+            aria-label="Close notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto space-y-4">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -138,7 +304,10 @@ export const OdometerRoot = () => {
         </div>
 
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-4">
+          <form
+            onSubmit={handleSubmit(onSubmit, onError)}
+            className="space-y-4 pb-4"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-3">
                 <CarFront className="w-4 h-4 text-gray-500 mt-1" />
@@ -150,16 +319,23 @@ export const OdometerRoot = () => {
                     name="vehicle"
                     control={control}
                     render={({ field }) => (
-                      <Dropdown
-                        {...field}
-                        options={vehicleOptions}
-                        onChange={(option) => {
-                          field.onChange(option.value);
-                        }}
-                        className="mt-2 w-full"
-                        buttonClassName="px-3 py-2.5 bg-gray-50"
-                        value={field.value}
-                      />
+                      <>
+                        <Dropdown
+                          {...field}
+                          options={vehicleOptions}
+                          onChange={(option) => {
+                            field.onChange(option.value);
+                          }}
+                          className="mt-2 w-full"
+                          buttonClassName="px-3 py-2.5 bg-gray-50"
+                          value={field.value}
+                        />
+                        {errors.vehicle && (
+                          <p className="mt-1 text-xs text-red-500">
+                            {errors.vehicle.message as string}
+                          </p>
+                        )}
+                      </>
                     )}
                   />
                 </div>
@@ -178,6 +354,11 @@ export const OdometerRoot = () => {
                     placeholder="e.g. 102545"
                     className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base text-gray-800 outline-none focus:ring-2 focus:ring-rose-100 focus:border-rose-300"
                   />
+                  {errors.start_reading && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.start_reading.message as string}
+                    </p>
+                  )}
                 </div>
               </label>
             </div>
@@ -188,6 +369,7 @@ export const OdometerRoot = () => {
                 tripOptions={tripOptions}
                 mode={mode}
                 setMode={setMode}
+                error={errors.trip?.message as string | undefined}
               />
             )}
 

@@ -8,6 +8,7 @@ interface TripFieldProps {
   tripOptions: DropdownOption[];
   mode: string;
   setMode: (mode: string) => void;
+  error?: string;
 }
 
 export const TripField = ({
@@ -15,6 +16,7 @@ export const TripField = ({
   tripOptions,
   mode,
   setMode,
+  error,
 }: TripFieldProps) => {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -39,6 +41,9 @@ export const TripField = ({
               />
             )}
           />
+          {error && (
+            <p className="mt-1 text-xs text-red-500">{error}</p>
+          )}
         </label>
 
         <div className="bg-gray-50 rounded-xl p-1 inline-flex gap-1">

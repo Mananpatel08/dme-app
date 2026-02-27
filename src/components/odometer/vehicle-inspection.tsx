@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { SectionBlock } from "./section-block";
 import { Fuel, ShieldCheck, Wrench } from "lucide-react";
 import { FLUIDS_ITEMS, GENERAL_ITEMS } from "@/utils/constants";
-import { Control } from "react-hook-form";
+import { Control, useFormContext } from "react-hook-form";
 import { TripInspectionFormValues } from "@/types";
 
 interface VehicleInspectionProps {
@@ -15,6 +15,17 @@ export const VehicleInspection = ({
   progress,
   control,
 }: VehicleInspectionProps) => {
+  const {
+    formState: { errors },
+  } = useFormContext<TripInspectionFormValues>();
+
+  const fluidsError =
+    ((errors.fluids as any)?.message ||
+      (errors.fluids as any)?.root?.message) as string | undefined;
+  const generalError =
+    ((errors.general as any)?.message ||
+      (errors.general as any)?.root?.message) as string | undefined;
+
   const groupedItems = useMemo(
     () => ({
       fluids: FLUIDS_ITEMS,
@@ -48,6 +59,10 @@ export const VehicleInspection = ({
         />
       </div>
 
+      {fluidsError && (
+        <p className="text-xs text-red-500 mb-2">{fluidsError}</p>
+      )}
+
       <SectionBlock
         title="Fluids"
         name="fluids"
@@ -55,6 +70,10 @@ export const VehicleInspection = ({
         items={groupedItems.fluids}
         control={control}
       />
+
+      {generalError && (
+        <p className="text-xs text-red-500 mb-2 mt-4">{generalError}</p>
+      )}
 
       <SectionBlock
         title="Safety"

@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import logo from "@/assets/images/dme_logo.png";
 import { LogOut, RefreshCcw } from "lucide-react";
+import AuthService from "@/services/auth";
 
 interface TopNavbarProps {
   username?: string;
@@ -15,7 +16,8 @@ export const TopNavbar = ({ username = "Manan" }: TopNavbarProps) => {
   };
 
   const handleLogout = () => {
-    console.log("Logout clicked");
+    new AuthService().removeToken();
+    window.location.href = "/login";
   };
 
   return (

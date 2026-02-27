@@ -27,8 +27,8 @@ export interface GeneralInspectionFormItem {
 }
 
 export interface TripInspectionFormValues {
-  vehicle?: number;
-  trip?: number;
+  vehicle: string;
+  trip: string;
   trip_name: string;
   trip_date: string;
   start_time: string;

@@ -11,4 +11,13 @@ export default class VehicleService {
     });
     return response.data;
   }
+
+  async vehicleInspection(data: any): Promise<any> {
+    const response = await client.api({
+      method: "POST",
+      url: "/api/vehicle-inspection/",
+      data,
+    });
+    return response.data;
+  }
 }
