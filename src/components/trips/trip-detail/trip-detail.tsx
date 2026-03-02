@@ -5,21 +5,25 @@ import { Ambulance, FilePenLine, Globe, MapPin, User } from "lucide-react";
 import Dropdown from "@/components/ui/dropdown";
 import { useGetTripQuery, useUpdateTripMutation } from "@/api/trips";
 import { STATUS_OPTIONS } from "@/utils/constants";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Status } from "@/types";
-import { Notification, NotificationType } from "@/components/ui";
+import { ErrorState, Notification, NotificationType } from "@/components/ui";
+import { TripDetailSkeleton } from "@/components/loader/trip-detail-skeleton";
 
-interface TripDetailProps {
-  tripId: string;
-}
-
-export const TripDetail = ({ tripId }: TripDetailProps) => {
+export const TripDetail = () => {
+  const { tripId } = useParams();
   const router = useRouter();
+  const normalizedTripId = Array.isArray(tripId) ? tripId[0] : tripId;
 
-  const { data: trip, isLoading } = useGetTripQuery(tripId);
+  const {
+    data: trip,
+    isLoading,
+    isFetching,
+    isError,
+  } = useGetTripQuery(normalizedTripId);
 
   const { mutate: updateTripStatus, isPending: isUpdating } =
-    useUpdateTripMutation(tripId);
+    useUpdateTripMutation(normalizedTripId || "");
 
   const [notification, setNotification] = useState<{
     type: NotificationType;
@@ -51,9 +55,11 @@ export const TripDetail = ({ tripId }: TripDetailProps) => {
       },
     });
   };
-
-  if (isLoading) return <div>Loading...</div>;
-  if (!trip) return <div>Trip not found</div>;
+  if (!normalizedTripId) return <TripDetailSkeleton />;
+  if (isLoading || isFetching) return <TripDetailSkeleton />;
+  if (isError)
+    return <ErrorState message="Failed to load trip" routePath="/" />;
+  if (!trip) return <ErrorState message="Trip not found" routePath="/" />;
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
@@ -103,7 +109,7 @@ export const TripDetail = ({ tripId }: TripDetailProps) => {
             </p>
             <p className="mt-1 text-sm font-semibold text-gray-800 inline-flex items-center gap-2">
               <User className="w-4 h-4 text-gray-400" />
-              {trip?.trip_customer?.customer?.email}
+              {trip.trip_customer?.customer?.email}
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
@@ -111,7 +117,7 @@ export const TripDetail = ({ tripId }: TripDetailProps) => {
               Time
             </p>
             <p className="mt-1 text-sm font-semibold text-gray-800">
-              {trip?.pickup_time?.slice(0, 5)}
+              {trip.pickup_time?.slice(0, 5)}
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
@@ -120,7 +126,7 @@ export const TripDetail = ({ tripId }: TripDetailProps) => {
             </p>
             <p className="mt-1 text-sm font-semibold text-gray-800 inline-flex items-center gap-2">
               <MapPin className="w-4 h-4 text-gray-400" />
-              {trip?.pickup_location}
+              {trip.pickup_location}
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
@@ -128,7 +134,7 @@ export const TripDetail = ({ tripId }: TripDetailProps) => {
               Needs
             </p>
             <p className="mt-1 text-sm font-semibold text-gray-800 capitalize">
-              {trip?.needs}
+              {trip.needs}
             </p>
           </div>
         </div>

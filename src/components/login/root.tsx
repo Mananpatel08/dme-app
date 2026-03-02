@@ -1,35 +1,46 @@
 "use client";
 
-import React from "react";
-import { Loader2, Lock, User } from "lucide-react";
+import React, { useState } from "react";
+import { EyeIcon, EyeOffIcon, Loader2, Lock, User } from "lucide-react";
 import Image from "next/image";
 import logo from "@/assets/images/dme_logo.png";
 import { BrowserPersistence } from "@/utils/simplePersistence";
 import { LoginCredentials } from "@/types";
 import { loginSchema } from "@/utils/validationSchema";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, Resolver, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useLoginMutation } from "@/api/auth";
 import AuthService from "@/services/auth";
+import { AxiosError } from "axios";
+import { Notification, NotificationType } from "../ui";
 
 const storage = new BrowserPersistence();
 
+interface LoginFormValues extends LoginCredentials {
+  saveCreations: boolean;
+}
+
 export const LoginRoot = () => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: NotificationType;
+    message: string;
+  } | null>(null);
+
   const { mutate: loginMutation, isPending } = useLoginMutation();
 
-  const storedEmail = storage.getItem("username") || "";
-  const storedPassword = storage.getItem("savedPass") || "";
-  const storedSaveCredentials = storage.getItem("username") ? true : false;
+  const storedEmail = (storage.getItem("username") as string | undefined) ?? "";
+  const storedSaveCredentials = !!storedEmail;
 
   const defaultValues = {
     username: storedEmail || "",
-    password: storedPassword ? JSON.parse(atob(storedPassword)) : "",
+    password: "",
     saveCreations: storedSaveCredentials,
   };
 
-  const methods = useForm<LoginCredentials>({
+  const methods = useForm<LoginFormValues>({
     defaultValues,
-    resolver: yupResolver(loginSchema),
+    resolver: yupResolver(loginSchema) as Resolver<LoginFormValues>,
   });
 
   const {
@@ -38,25 +49,40 @@ export const LoginRoot = () => {
     formState: { errors },
   } = methods;
 
-  const handleLogin = (data: LoginCredentials) => {
-    loginMutation(data, {
+  const handleLogin = (data: LoginFormValues) => {
+    const { saveCreations, ...credentials } = data;
+
+    loginMutation(credentials, {
       onSuccess: (data) => {
+        if (saveCreations) {
+          storage.setItem("username", credentials.username);
+        } else {
+          storage.removeItem("username");
+        }
         new AuthService().setToken(data.data.access_token);
         window.location.href = "/";
+      },
+      onError: (error: unknown) => {
+        const axiosError = error as AxiosError<{ message?: string }>;
+
+        setNotification({
+          type: "error",
+          message: axiosError.response?.data?.message ?? "Login failed",
+        });
       },
     });
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <div className="flex justify-center mb-6">
+      <div className="flex justify-center mb-0 sm:mb-6">
         <Image src={logo} alt="Logo" width={100} height={100} />
       </div>
 
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(handleLogin)}
-          className="w-full max-w-md bg-white rounded-2xl shadow-xl p-10 pt-12 relative"
+          className="w-full max-w-md bg-gray-100 sm:bg-white sm:shadow-xl rounded-2xl p-10 pt-12 relative"
         >
           <h2 className="text-3xl font-semibold text-gray-800 text-start">
             Welcome back
@@ -72,7 +98,7 @@ export const LoginRoot = () => {
                 border-gray-300 focus-within:border-red-600
               `}
             >
-              <User className="w-4 h-4 mr-3 text-gray-400 transition-colors duration-300 focus-within:text-red-600" />
+              <User className="w-5 h-5 mr-3 text-gray-400 transition-colors duration-300 focus-within:text-red-600" />
               <input
                 {...register("username")}
                 type="text"
@@ -94,14 +120,25 @@ export const LoginRoot = () => {
                 border-gray-300 focus-within:border-red-600
               `}
             >
-              <Lock className="w-4 h-4 mr-3 text-gray-400 transition-colors duration-300 focus-within:text-red-600" />
+              <Lock className="w-5 h-5 mr-3 text-gray-400 transition-colors duration-300 focus-within:text-red-600" />
               <input
                 {...register("password")}
-                type="password"
+                type={isPasswordVisible ? "text" : "password"}
                 placeholder="Enter your password"
-                className="w-full py-2 text-base bg-transparent outline-none placeholder-gray-400"
+                className="w-full py-2 text-base bg-transparent outline-none placeholder-gray-400 pr-2"
                 autoComplete="off"
               />
+              <button
+                type="button"
+                onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                className="text-gray-400 hover:text-red-600 transition-colors duration-300 focus-within:text-red-600 mr-3 cursor-pointer"
+              >
+                {isPasswordVisible ? (
+                  <EyeOffIcon className="w-5 h-5 text-gray-400 transition-colors duration-300 focus-within:text-red-600 hover:text-red-600" />
+                ) : (
+                  <EyeIcon className="w-5 h-5 text-gray-400 transition-colors duration-300 focus-within:text-red-600 hover:text-red-600" />
+                )}
+              </button>
             </div>
 
             {errors.password && (
@@ -113,26 +150,27 @@ export const LoginRoot = () => {
 
           <label className="flex items-center gap-2 cursor-pointer mb-6">
             <input
-              name="saveCreations"
+              {...register("saveCreations")}
               type="checkbox"
-              className="w-4 h-4 appearance-none border border-gray-300 rounded-sm 
-                checked:bg-red-600 checked:border-red-600 
-                relative checked:after:content-['✔'] 
-                checked:after:text-white 
-                checked:after:text-[12px] 
-                checked:after:absolute 
-                checked:after:top-[-2px] 
-                checked:after:left-[2px]"
+              className="w-5 h-5 sm:w-4 sm:h-4 rounded border-gray-300 text-sky-500"
             />
             <span className="text-sm text-gray-600 select-none">
               Remember me?
             </span>
           </label>
 
+          {notification && (
+            <Notification
+              notification={notification}
+              className="mb-6"
+              onClose={() => setNotification(null)}
+            />
+          )}
+
           <button
             type="submit"
             disabled={isPending}
-            className="w-full bg-red-600 hover:bg-red-700 transition-all duration-300 text-white py-3 rounded-full font-medium shadow-md flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
+            className="w-full bg-red-600 hover:bg-red-700 transition-all duration-300 text-white py-3 rounded-xl font-medium shadow-md flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
           >
             {isPending ? (
               <Loader2 className="w-5 h-5 text-center animate-spin text-white" />

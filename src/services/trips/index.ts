@@ -33,6 +33,6 @@ export default class TripService {
         status,
       },
     });
-    return response.data;
+    return response.data.data ?? response.data;
   }
 }

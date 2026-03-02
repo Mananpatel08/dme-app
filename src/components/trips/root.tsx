@@ -21,7 +21,7 @@ export const TripsRoot = () => {
   const trips = useMemo(() => tripList?.data.results ?? [], [tripList?.data.results]);
 
   const pickupTrips = useMemo(
-    () => trips.filter((t) => !t.returning_now),
+    () => trips,
     [trips],
   );
   const returnTrips = useMemo(

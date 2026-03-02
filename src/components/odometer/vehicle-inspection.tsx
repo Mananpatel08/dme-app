@@ -35,7 +35,7 @@ export const VehicleInspection = ({
             Mark each item and leave comments where needed.
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right flex items-center gap-2 lg:flex-col lg:items-end lg:gap-1">
           <p className="text-xs text-gray-500">Completion</p>
           <p className="text-sm font-semibold text-gray-800">{progress}%</p>
         </div>

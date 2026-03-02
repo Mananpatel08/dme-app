@@ -12,6 +12,7 @@ export const loginSchema = Yup.object({
   password: Yup.string()
     .required("Password is required")
     .min(6, "Password must be at least 6 characters"),
+  saveCreations: Yup.boolean().default(false),
 });
 
 const fluidItemSchema: Yup.ObjectSchema<FluidInspectionFormItem> = Yup.object({
