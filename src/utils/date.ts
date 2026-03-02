@@ -49,3 +49,12 @@ export function formatChatDateLabel(dateString: string) {
 export const getCurrentDate = () => new Date().toISOString().slice(0, 10);
 
 export const getCurrentTime = () => new Date().toTimeString().slice(0, 8);
+
+export function isToday(date: Date): boolean {
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}

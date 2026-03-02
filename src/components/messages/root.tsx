@@ -20,7 +20,7 @@ import { groupMessagesByDate } from "@/utils/helper";
 import { useGetMessagesQuery } from "@/api/messages";
 import { chatSocket } from "@/services/message/chatSocket";
 import { useUserContext } from "@/context/userContext";
-import { useChatStore } from "@/store/chat.store";
+import { useChatStore } from "@/store";
 
 export const MessagesRoot = () => {
   // useRefs

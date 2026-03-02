@@ -1,4 +1,4 @@
-import { InspectionItem } from "@/types";
+import { InspectionItem, StatusOption } from "@/types";
 
 export interface InspectionSchemaItem {
   id: string;
@@ -254,4 +254,35 @@ export const GENERAL_ITEMS: InspectionItem[] = [
     label: item.label,
     group: item.group,
   })),
+];
+
+export const STATUS_OPTIONS: StatusOption[] = [
+  {
+    label: "Scheduled",
+    value: "scheduled",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    dot: "bg-blue-500",
+  },
+  {
+    label: "Enroute to Pickup",
+    value: "enroute_to_pickup",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
+  },
+  {
+    label: "Pickup",
+    value: "pickup",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    dot: "bg-emerald-500",
+  },
+  {
+    label: "Drop-off",
+    value: "drop_off",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
 ];
